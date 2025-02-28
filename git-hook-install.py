@@ -58,12 +58,24 @@ def install_dependencies() -> None:
     """Install required Python dependencies"""
     try:
         print("Installing required Python dependencies...")
+        # First install required packages
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", "requests"
         ])
+        
+        # Try to install PyQt5, but don't fail if it can't be installed
+        try:
+            print("Attempting to install PyQt5 for GUI...")
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", "PyQt5"
+            ])
+            print("PyQt5 installed successfully")
+        except subprocess.CalledProcessError:
+            print("Note: PyQt5 could not be installed. Will use terminal UI instead.")
+            
         print("Dependencies installed successfully")
     except subprocess.CalledProcessError:
-        print("Error: Failed to install dependencies")
+        print("Error: Failed to install core dependencies")
         sys.exit(1)
 
 
