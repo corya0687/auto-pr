@@ -33,8 +33,11 @@ def create_hook_file(hooks_dir: str, script_path: str) -> None:
 # Claude PR Reviewer pre-push hook
 # This hook runs the Claude PR Reviewer before pushing commits
 
-# Run the PR reviewer script
-python3 "{script_path}" "$@"
+# Get the directory where the script is located
+SCRIPT_DIR="$(dirname "$0")"
+
+# Add the hooks directory to Python path to find the claude_pr_reviewer package
+PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH" python3 "{script_path}" "$@"
 
 # Check the exit code
 exit_code=$?
@@ -98,8 +101,36 @@ def main() -> None:
     destination_script = os.path.join(git_root, ".git", "hooks", "claude_pr_reviewer.py")
     
     if os.path.exists(os.path.join(script_dir, "claude_pr_reviewer.py")):
+        # Copy the main script
         shutil.copy2(reviewer_script, destination_script)
         os.chmod(destination_script, os.stat(destination_script).st_mode | stat.S_IXUSR)
+        
+        # Also copy the claude_pr_reviewer package directory
+        package_source = os.path.join(script_dir, "claude_pr_reviewer")
+        package_dest = os.path.join(git_root, ".git", "hooks", "claude_pr_reviewer")
+        
+        # Create the package directory if it doesn't exist
+        if not os.path.exists(package_dest):
+            os.makedirs(package_dest)
+        
+        # Copy all files from the package
+        if os.path.isdir(package_source):
+            for item in os.listdir(package_source):
+                item_src = os.path.join(package_source, item)
+                item_dst = os.path.join(package_dest, item)
+                
+                if os.path.isdir(item_src):
+                    # It's a subdirectory, copy it recursively
+                    if not os.path.exists(item_dst):
+                        os.makedirs(item_dst)
+                    for subitem in os.listdir(item_src):
+                        subitem_src = os.path.join(item_src, subitem)
+                        subitem_dst = os.path.join(item_dst, subitem)
+                        if os.path.isfile(subitem_src):
+                            shutil.copy2(subitem_src, subitem_dst)
+                elif os.path.isfile(item_src):
+                    # It's a file, just copy it
+                    shutil.copy2(item_src, item_dst)
     else:
         print("Error: claude_pr_reviewer.py not found in the same directory as this script")
         sys.exit(1)
